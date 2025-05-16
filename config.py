@@ -1,0 +1,6 @@
+LLAMA4_MODEL = "llama3-70b-8192"
+DEEPSEEK_MODEL = "deepseek-coder-33b-instruct"
+NOMIC_EMBED_MODEL = "nomic-ai/nomic-embed-text-v1.5"
+DATA_DIR = "data_for_rag"
+INDEX_DIR_PREFIX = "llm_index_"
+RERANKER_MODEL_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
