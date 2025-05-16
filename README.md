@@ -79,10 +79,6 @@ streamlit run LLM/main.py
 4. **Experiment:** Adjust retrieval & transformation settings.
 5. **Query & Analyze:** Run queries and view detailed metadata.
 
-## 🌱 Roadmap
-
-* More reranker and LLM support
-* Real-time visual metrics
 
 ## 👤 About the Developer
 
