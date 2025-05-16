@@ -12,6 +12,12 @@ PERSIST_DIR_BASE = os.path.join(PROJECT_ROOT, "persisted_index")
 DOCUMENT_TRACKING_FILE = os.path.join(PERSIST_DIR_BASE, "document_states.json")
 # --- END IMPORTANT DIRECTORY CONFIGURATIONS ---
 
+# --- ADDED: Supported File Extensions ---
+SUPPORTED_FILE_EXTENSIONS = [
+    ".pdf", ".docx", ".pptx", ".xlsx", ".txt", ".md"
+]
+# --- END ADDED ---
+
 # Embedding model
 EMBEDDING_MODEL_ID = "sentence-transformers/all-MiniLM-L6-v2" # Example
 
@@ -23,8 +29,8 @@ RERANKER_MODEL_ID = "BAAI/bge-reranker-base" # Ensure this line exists and is co
 JUDGE_MODEL_NAME = LLAMA4_MODEL
 
 # Other settings
-DEFAULT_CHUNK_SIZE = 512
-DEFAULT_CHUNK_OVERLAP = 20
+DEFAULT_CHUNK_SIZE = 512 # This will be overridden by sidebar config if available
+DEFAULT_CHUNK_OVERLAP = 20 # This will be overridden by sidebar config if available
 
 # Query Transformation Prompt (Example)
 DEFAULT_QUERY_TRANSFORMATION_PROMPT = (
@@ -35,7 +41,7 @@ DEFAULT_QUERY_TRANSFORMATION_PROMPT = (
 )
 
 # Logging configuration
-LOG_LEVEL = "INFO"
+LOG_LEVEL = "INFO" # Example: "DEBUG", "INFO", "WARNING"
 LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 
 # API Keys - To be managed by user (e.g., via Streamlit secrets or environment variables)

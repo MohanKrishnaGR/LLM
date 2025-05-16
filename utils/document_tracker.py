@@ -2,150 +2,116 @@
 import os
 import hashlib
 import json
-from datetime import datetime # Corrected: Added space here
-import logging
+import logging # Recommended to use logging over print for consistency
+from config import SUPPORTED_FILE_EXTENSIONS # New import
 
 logger = logging.getLogger(__name__)
 
-def get_file_hash(filepath):
-    """Computes SHA256 hash of a file."""
+def get_file_hash(file_path: str) -> str:
+    """Computes the SHA256 hash of a file."""
     hasher = hashlib.sha256()
     try:
-        with open(filepath, 'rb') as f:
-            while chunk := f.read(8192): # Use walrus operator for cleaner loop
+        with open(file_path, "rb") as f:
+            while chunk := f.read(8192): # Read in chunks
                 hasher.update(chunk)
         return hasher.hexdigest()
-    except FileNotFoundError:
-        logger.error(f"File not found when trying to hash: {filepath}")
-        return None
-    except Exception as e:
-        logger.error(f"Error hashing file {filepath}: {e}", exc_info=True)
-        return None
+    except IOError as e:
+        logger.error(f"Could not read file {file_path} for hashing: {e}")
+        raise # Re-raise the exception to be handled by the caller
 
-def get_file_m_time(filepath):
-    """Gets the last modification time of a file as an ISO format string."""
-    try:
-        return datetime.fromtimestamp(os.path.getmtime(filepath)).isoformat()
-    except FileNotFoundError:
-        logger.error(f"File not found when trying to get m_time: {filepath}")
-        return None
-    except Exception as e:
-        logger.error(f"Error getting m_time for file {filepath}: {e}", exc_info=True)
-        return None
-
-def scan_directory_for_document_states(data_dir: str) -> dict:
+def scan_directory_for_document_states(directory: str) -> dict:
     """
-    Scans a directory and returns a dictionary of document states (hash, m_time).
-    Keys are absolute file paths.
+    Scans a directory for supported files and returns their current states (path, hash, mtime).
+    Only includes files with extensions listed in SUPPORTED_FILE_EXTENSIONS from config.py.
     """
     doc_states = {}
-    if not os.path.isdir(data_dir):
-        logger.warning(f"Data directory {data_dir} not found for scanning.")
-        return doc_states
-        
-    try:
-        for filename in os.listdir(data_dir):
-            filepath = os.path.join(data_dir, filename)
-            if os.path.isfile(filepath):
-                # Add more sophisticated file type filtering here if needed
-                # e.g., based on a list of supported extensions
-                # supported_extensions = ('.txt', '.pdf', '.md', '.docx', '.pptx')
-                # if not filename.lower().endswith(supported_extensions):
-                #     logger.debug(f"Skipping unsupported file type: {filepath}")
-                #     continue
+    if not os.path.isdir(directory):
+        logger.error(f"Data directory '{directory}' not found. Cannot scan for documents.")
+        return doc_states # Return empty if directory doesn't exist
 
-                file_hash = get_file_hash(filepath)
-                m_time = get_file_m_time(filepath)
-                
-                if file_hash and m_time:
-                    # Using absolute filepath as doc_id for uniqueness
-                    doc_states[filepath] = {
+    logger.info(f"Scanning directory '{directory}' for supported file types: {SUPPORTED_FILE_EXTENSIONS}")
+    for root, _, files in os.walk(directory):
+        for file_name in files:
+            file_path = os.path.join(root, file_name)
+            file_ext = os.path.splitext(file_name)[1].lower() # Get extension and lowercase it
+
+            if file_ext in SUPPORTED_FILE_EXTENSIONS:
+                try:
+                    file_hash = get_file_hash(file_path)
+                    doc_states[file_path] = {
                         "hash": file_hash,
-                        "m_time": m_time,
-                        "filename": filename # Storing filename for convenience
+                        "last_modified": os.path.getmtime(file_path), # Store last modified time
+                        "file_name": file_name # Store filename for easier reference if needed
                     }
-                else:
-                    logger.warning(f"Could not get hash or m_time for {filepath}. Skipping.")
-    except Exception as e:
-        logger.error(f"Error scanning directory {data_dir}: {e}", exc_info=True)
+                    logger.debug(f"Tracked supported file: {file_path}")
+                except Exception as e:
+                    # Log error if hashing or stat-ing fails for a supported file type
+                    logger.error(f"Error processing file {file_path} during scan: {e}", exc_info=True)
+            else:
+                logger.debug(f"Skipping unsupported file type: {file_path} (extension: {file_ext})")
+    
+    if not doc_states:
+        logger.warning(f"No files with supported extensions found in directory: {directory}. Ensure files have extensions: {SUPPORTED_FILE_EXTENSIONS}")
+    else:
+        logger.info(f"Found {len(doc_states)} supported files in '{directory}'.")
     return doc_states
 
-def load_tracking_data(tracking_file_path: str) -> dict:
-    """Loads document tracking data from a JSON file."""
-    if os.path.exists(tracking_file_path):
+def load_tracking_data(file_path: str) -> dict:
+    """Loads the document tracking data from a JSON file."""
+    if os.path.exists(file_path):
         try:
-            with open(tracking_file_path, 'r') as f:
+            with open(file_path, "r") as f:
                 data = json.load(f)
-                if not isinstance(data, dict):
-                    logger.error(f"Tracking data in {tracking_file_path} is not a dictionary. Returning empty.")
-                    return {}
+                logger.info(f"Successfully loaded tracking data from {file_path}")
                 return data
-        except json.JSONDecodeError:
-            logger.error(f"Error decoding JSON from {tracking_file_path}. Returning empty tracking data.", exc_info=True)
-            return {}
-        except Exception as e:
-            logger.error(f"Error loading tracking data from {tracking_file_path}: {e}", exc_info=True)
-            return {}
+        except (json.JSONDecodeError, IOError) as e:
+            logger.error(f"Error loading tracking data from {file_path}: {e}. Returning empty data.", exc_info=True)
+            return {} # Return empty dict on error to allow rebuilding
+    logger.info(f"Tracking file {file_path} not found. Returning empty data.")
     return {}
 
-def save_tracking_data(tracking_file_path: str, doc_states: dict):
-    """Saves document tracking data to a JSON file."""
+def save_tracking_data(file_path: str, data: dict):
+    """Saves the document tracking data to a JSON file."""
     try:
-        # Ensure the directory for the tracking file exists
-        os.makedirs(os.path.dirname(tracking_file_path), exist_ok=True)
-        with open(tracking_file_path, 'w') as f:
-            json.dump(doc_states, f, indent=4)
-        logger.info(f"Document tracking data saved to {tracking_file_path}")
-    except Exception as e:
-        logger.error(f"Error saving tracking data to {tracking_file_path}: {e}", exc_info=True)
+        os.makedirs(os.path.dirname(file_path), exist_ok=True) # Ensure directory exists
+        with open(file_path, "w") as f:
+            json.dump(data, f, indent=4)
+        logger.info(f"Successfully saved tracking data for {len(data)} documents to {file_path}")
+    except IOError as e:
+        logger.error(f"Error saving tracking data to {file_path}: {e}", exc_info=True)
 
-def compare_document_states(current_states: dict, tracked_states: dict) -> tuple[list, list, list]:
+
+def compare_document_states(current_states: dict, tracked_states: dict) -> tuple[list[str], list[str], list[str]]:
     """
-    Compares current document states with tracked states to find new, modified, and deleted files.
-    
-    Args:
-        current_states: Dictionary of current document states (from scanning the filesystem).
-                        Keys are file paths.
-        tracked_states: Dictionary of previously tracked document states (from the tracking file).
-                        Keys are file paths.
-
-    Returns:
-        tuple: (new_file_paths, modified_file_paths, deleted_doc_ids)
-               Paths/IDs are typically the file paths used as keys in the state dictionaries.
+    Compares current document states (from filesystem scan) with previously tracked states.
+    Returns lists of new file paths, modified file paths, and deleted document IDs (which are file paths).
     """
-    new_file_paths = []
-    modified_file_paths = []
-    
-    current_doc_ids = set(current_states.keys())
-    tracked_doc_ids = set(tracked_states.keys())
+    new_files: list[str] = []
+    modified_files: list[str] = []
 
-    # New files: in current_states but not in tracked_states
-    for doc_id in current_doc_ids - tracked_doc_ids:
-        new_file_paths.append(doc_id)
-        logger.debug(f"Detected new file: {doc_id}")
+    current_paths = set(current_states.keys())
+    tracked_paths = set(tracked_states.keys())
 
-    # Deleted files: in tracked_states but not in current_states
-    deleted_doc_ids = list(tracked_doc_ids - current_doc_ids)
+    # Identify new files: present in current_paths but not in tracked_paths
+    for path in current_paths - tracked_paths:
+        new_files.append(path)
+        logger.info(f"Detected new file: {current_states[path].get('file_name', path)}")
+
+    # Identify potentially modified files: present in both current_paths and tracked_paths
+    for path in current_paths.intersection(tracked_paths):
+        # Compare hashes to confirm modification
+        if current_states[path]["hash"] != tracked_states[path].get("hash"): # Use .get for safety
+            modified_files.append(path)
+            logger.info(f"Detected modified file: {current_states[path].get('file_name', path)} (hash changed)")
+
+    # Identify deleted documents: present in tracked_paths but not in current_paths
+    # The doc_id used for deletion from the index is the file_path.
+    deleted_doc_ids: list[str] = list(tracked_paths - current_paths)
     if deleted_doc_ids:
-        logger.debug(f"Detected deleted files/IDs: {deleted_doc_ids}")
+        deleted_file_names = [tracked_states[path].get('file_name', path) for path in deleted_doc_ids]
+        logger.info(f"Detected deleted files (doc_ids/paths): {deleted_file_names}")
 
-
-    # Potentially modified files: in both, check hash or m_time
-    for doc_id in current_doc_ids.intersection(tracked_doc_ids):
-        current_hash = current_states[doc_id].get("hash")
-        tracked_hash = tracked_states[doc_id].get("hash")
-        current_m_time = current_states[doc_id].get("m_time")
-        tracked_m_time = tracked_states[doc_id].get("m_time")
-
-        # Primary check: hash difference
-        if current_hash != tracked_hash:
-            modified_file_paths.append(doc_id)
-            logger.debug(f"Detected modified file (hash mismatch): {doc_id}")
-        # Secondary check: m_time difference (if hashes are same, or one is missing)
-        # This handles cases where content might not change hash (e.g. metadata only)
-        # or if hashing failed for one version.
-        elif current_m_time != tracked_m_time:
-            modified_file_paths.append(doc_id)
-            logger.debug(f"Detected modified file (m_time mismatch, hash was {current_hash==tracked_hash}): {doc_id}")
-            
-    return new_file_paths, modified_file_paths, deleted_doc_ids
+    if not new_files and not modified_files and not deleted_doc_ids:
+        logger.info("No changes detected in document states.")
+        
+    return new_files, modified_files, deleted_doc_ids

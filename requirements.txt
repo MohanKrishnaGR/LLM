@@ -1,11 +1,10 @@
-# LLM/requirements.txt
 streamlit>=1.45.0
-llama-index[llms,embeddings,postprocessor,graph_stores]>=0.10.38 
+llama-index[llms,embeddings,postprocessor,graph_stores]>=0.10.38
 llama-index-llms-groq>=0.3.1
 llama-index-embeddings-fastembed>=0.3.2
 sentence-transformers>=4.1.0
 # opik>=0.1.9 # Ensure this is needed or remove if not used
-pypdf>=3.15.0 # For PDF reading with SimpleDirectoryReader
+pypdf>=3.15.0 # For PDF reading (can be overridden by PyMuPDF)
 python-dotenv>=1.0.0
 typing-extensions>=4.5.0
 pydantic>=2.0.0
@@ -18,6 +17,13 @@ python-docx # For .docx files
 openpyxl # For .xlsx files
 beautifulsoup4 # For .html files (often a dependency of other readers)
 llama-index-readers-file # sometimes contains more specialized file readers
+
+# --- Added/Updated for robust multi-modal ingestion ---
+python-pptx>=0.6.21 # For .pptx files
+pandas>=1.3.5 # Dependency for PandasExcelReader
+pymupdf>=1.23.0 # For robust PDF parsing (PyMuPDFReader)
+markdown>=3.3.0 # For .md files (MarkdownReader)
+# --- End Added/Updated ---
 
 # Placeholder for future audio transcription libraries
 # openai-whisper # if using OpenAI Whisper locally
