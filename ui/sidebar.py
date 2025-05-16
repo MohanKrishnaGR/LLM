@@ -114,33 +114,38 @@ def load_or_initialize_index(selected_index_type: str, llm_for_indexing, embed_m
 
 
 def render_sidebar():
-    st.sidebar.header("⚙️ Configuration")
+    st.sidebar.markdown("## 🛠️ RAG Configuration Workbench") # Overall sidebar title
+    st.sidebar.markdown("_Adjust settings to explore RAG techniques._")
+    st.sidebar.markdown("---")
 
-    # API Keys
-    st.sidebar.subheader("🔑 API Keys")
-    groq_api_key = st.sidebar.text_input(
-        "Groq API Key",
-        type="password",
-        key="groq_api_key_sidebar_input",
-        help="Enter your Groq API key to use Groq-based LLMs."
-    )
-    if groq_api_key:
-        st.session_state["groq_api_key_sidebar"] = groq_api_key
+    with st.sidebar.expander("🔑 API Keys & Core Models", expanded=True):
 
-    # LLM Selection
-    st.sidebar.subheader("🧠 LLM Selection")
-    models = {
-        "Llama3 70b (Meta)": LLAMA4_MODEL,
-        "DeepSeek Coder 33b (DeepSeek)": DEEPSEEK_MODEL
-    }
-    selected_model_display_name = st.sidebar.selectbox(
-        "Choose LLM:",
-        list(models.keys()),
-        key="selected_model_key",
-        help="Select the Large Language Model to use for generation and potentially indexing."
-    )
-    st.session_state.selected_model = models[selected_model_display_name]
+        # API Keys
+        st.sidebar.subheader("🔑 API Keys")
+        groq_api_key = st.sidebar.text_input(
+            "Groq API Key",
+            type="password",
+            key="groq_api_key_sidebar_input",
+            help="Enter your Groq API key to use Groq-based LLMs."
+        )
+        if groq_api_key:
+            st.session_state["groq_api_key_sidebar"] = groq_api_key
 
+        # LLM Selection
+        st.sidebar.subheader("🧠 LLM Selection")
+        models = {
+            "Llama3 70b (Meta)": LLAMA4_MODEL,
+            "DeepSeek Coder 33b (DeepSeek)": DEEPSEEK_MODEL
+        }
+        selected_model_display_name = st.sidebar.selectbox(
+            "Choose LLM:",
+            list(models.keys()),
+            key="selected_model_key",
+            help="Select the Large Language Model to use for generation and potentially indexing."
+        )
+        st.session_state.selected_model = models[selected_model_display_name]
+
+    
     st.sidebar.subheader("📄 Document Processing")
     st.session_state.chunk_size_sidebar = st.sidebar.slider(
         "Chunk Size", 100, 2048, st.session_state.get("chunk_size_sidebar", DEFAULT_CHUNK_SIZE), 50,
@@ -412,4 +417,13 @@ def render_sidebar():
         f"Supported: `{', '.join(SUPPORTED_FILE_EXTENSIONS)}`\n"
         f"Index Persist: `{PERSIST_DIR_BASE}`\n\n"
         "Add documents to data dir & 'Create / Update Index'."
+    )
+    st.sidebar.markdown("---") # Add a separator
+    st.sidebar.markdown("### About the Developer")
+    st.sidebar.markdown(
+        "This application was developed by **Mohan Krishna G R**."
+    )
+    st.sidebar.markdown(
+        "[View Portfolio](https://mohankrishnagr.github.io/) | "
+        "[LinkedIn Profile](https://www.linkedin.com/in/grmk/)" 
     )

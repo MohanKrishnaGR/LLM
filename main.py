@@ -30,6 +30,12 @@ handle_main_ui() # Corrected function call: was run_async_main_ui()
 # Optional: Add a footer or other static content
 st.markdown("---")
 st.markdown(
-    "Built with Streamlit and LlamaIndex. Explore advanced RAG techniques."
+    "Developed by **Mohan Krishna G R** | Exploring AI/RAG? Let's "
+    "[connect on LinkedIn](https://www.linkedin.com/in/grmk/) | "
+    "[Portfolio](https://mohankrishnagr.github.io/) "
+)
+st.markdown(
+    "<i>Stay tuned! More advanced RAG techniques & features are underway and will be added soon.</i>",
+    unsafe_allow_html=True 
 )
 

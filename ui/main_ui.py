@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 def display_metadata(metadata: dict):
     if metadata:
-        with st.expander("View Processing Details (Metadata)", expanded=False):
+        with st.expander("🔬 View Processing Details (Metadata) - Understand the RAG Flow", expanded=False): # Expander title
+            st.markdown("_Inspect these details to see how different configurations affect query transformation, retrieval, and synthesis._") # Added descriptive text
             try:
                 st.json(json.loads(json.dumps(metadata, default=str)), expanded=True)
             except Exception as e:
@@ -23,12 +24,21 @@ def display_metadata(metadata: dict):
         st.info("No metadata available to display.")
 
 def handle_main_ui():
-    st.header("💬 Query Your Documents")
+    if "app_intro_shown" not in st.session_state: # To show only once per session
+        with st.expander("💡 Welcome to the RAG Experimentation Lab!", expanded=True):
+            st.markdown("""
+            This application is designed for a hands-on exploration of Retrieval Augmented Generation (RAG).
+            - **Use the sidebar** to configure every step of the RAG pipeline.
+            - **Observe how different settings** (indexing, retrieval, LLMs) impact the results.
+            - **Dive into the 'Processing Details'** below each response to understand the inner workings.
+            Happy experimenting!
+            """)
+    st.header("💬 Query Your Documents & Analyze RAG Behavior")
     query = st.text_area(
         "Enter your query:",
         height=100,
         key="query_input",
-        placeholder="Ask something about the content of your indexed documents..."
+        placeholder="Ask something about the content of your indexed documents... Try varying query complexity and observe the RAG pipeline's response."
     )
 
     if st.button("🚀 Run RAG Workflow", key="run_rag_button"):
