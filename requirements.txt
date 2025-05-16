@@ -1,11 +1,14 @@
+# LLM/requirements.txt
 streamlit>=1.45.0
-llama-index[llms,embeddings,postprocessor]>=0.10.38
+llama-index[llms,embeddings,postprocessor,graph_stores]>=0.10.38 
 llama-index-llms-groq>=0.3.1
 llama-index-embeddings-fastembed>=0.3.2
 sentence-transformers>=4.1.0
-opik>=0.1.9
+# opik>=0.1.9 # Ensure this is needed or remove
 pypdf>=3.15.0
 python-dotenv>=1.0.0
 typing-extensions>=4.5.0
 pydantic>=2.0.0
 loguru>=0.7.0
+llama-index-retrievers-bm25 # <--- Make sure this line is present
+nltk # <--- Add this for BM25Retriever's default tokenizer dependencies
