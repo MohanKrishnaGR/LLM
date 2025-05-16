@@ -1,1 +1,51 @@
+# Byte-compiled / optimized / DLL files
 __pycache__/
+*.py[cod]
+*$py.class
+
+# Caches
+.cache/
+.streamlit/
+
+# VSCode
+.vscode/
+
+# Environment files
+.env
+.venv/
+venv/
+ENV/
+env.bak/
+env/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Pytest
+.cache/
+.pytest_cache/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# Ignore data and models (customize as needed)
+data_for_rag/
+*.h5
+*.pkl
+*.pt
+*.onnx
+
+# Output and temporary files
+*.out
+*.tmp
+*.bak
+
+# Ignore any extraction folders
+squashfs-root/
+
+# Streamlit specific
+.streamlit/secrets.toml
