@@ -1,69 +1,48 @@
+# LLM/utils/llm_utils.py
 import streamlit as st
 from llama_index.llms.groq import Groq
+from llama_index.core.llms import LLM
 from llama_index.embeddings.fastembed import FastEmbedEmbedding
-from config import NOMIC_EMBED_MODEL
+from config import EMBEDDING_MODEL_ID, LLAMA4_MODEL # Import EMBEDDING_MODEL_ID
 import logging
-from typing import Optional, Any
+from typing import Optional
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def validate_api_key(api_key: str) -> bool:
-    """Validate the API key format."""
-    if not api_key or not isinstance(api_key, str):
-        return False
-    return api_key.strip() != ""
-
-def get_llm(model_name: str, api_key: str) -> Optional[Any]:
-    """
-    Initialize and return a Groq LLM instance.
-    
-    Args:
-        model_name: Name of the model to use
-        api_key: Groq API key
-        
-    Returns:
-        Optional[Any]: Configured LLM instance or None if initialization fails
-    """
-    if not validate_api_key(api_key):
-        logger.error("Invalid or missing API key")
-        st.error("Please provide a valid API key in the sidebar.")
-        return None
-
+@st.cache_resource(show_spinner="Connecting to Embedding Model...")
+def get_embedding_model() -> Optional[FastEmbedEmbedding]:
+    """Initializes and returns the embedding model using EMBEDDING_MODEL_ID from config."""
     try:
-        # Configure LLM with optimized settings
-        llm = Groq(
-            model=model_name,
-            api_key=api_key.strip(),
-            temperature=0.7,
-            max_tokens=2048,
-            top_p=0.9
-        )
-        logger.info(f"Successfully initialized LLM model: {model_name}")
-        return llm
-    except Exception as e:
-        logger.error(f"LLM initialization failed: {str(e)}")
-        st.error(f"Failed to initialize LLM: {str(e)}")
-        return None
-
-def get_embedding_model() -> Optional[Any]:
-    """
-    Initialize and return the embedding model instance.
-    
-    Returns:
-        Optional[Any]: Configured embedding model or None if initialization fails
-    """
-    try:
-        # Configure embedding model with optimized settings
-        embed_model = FastEmbedEmbedding(
-            model_name=NOMIC_EMBED_MODEL,
-            cache_dir="./.cache/embeddings",
-            max_length=512
-        )
-        logger.info(f"Successfully initialized embedding model: {NOMIC_EMBED_MODEL}")
+        embed_model = FastEmbedEmbedding(model_name=EMBEDDING_MODEL_ID)
+        logger.info(f"Successfully initialized embedding model: {EMBEDDING_MODEL_ID}")
         return embed_model
     except Exception as e:
-        logger.error(f"Embedding model initialization failed: {str(e)}")
-        st.error(f"Failed to initialize embedding model: {str(e)}")
+        logger.error(f"Failed to initialize embedding model {EMBEDDING_MODEL_ID}: {e}", exc_info=True)
+        st.error(f"Error initializing embedding model ({EMBEDDING_MODEL_ID}): {e}")
         return None
+
+@st.cache_resource(show_spinner="Connecting to LLM...")
+def get_llm(model_name: str, api_key: Optional[str] = None) -> Optional[LLM]:
+    """Initializes and returns the Language Model."""
+    if not api_key:
+        if "groq_api_key_sidebar" in st.session_state and st.session_state["groq_api_key_sidebar"]:
+            api_key = st.session_state["groq_api_key_sidebar"]
+        else:
+            logger.error("Groq API Key not found in session state or direct input.")
+            st.error("Groq API Key is required. Please enter it in the sidebar.")
+            return None
+    
+    try:
+        llm = Groq(model=model_name, api_key=api_key)
+        logger.info(f"Successfully initialized LLM: {model_name}")
+        return llm
+    except Exception as e:
+        logger.error(f"Failed to initialize LLM {model_name}: {e}", exc_info=True)
+        st.error(f"Error initializing LLM ({model_name}): {e}")
+        return None
+
+def get_default_llm_for_judging(api_key: Optional[str] = None) -> Optional[LLM]:
+    """Gets the default LLM specified for judging tasks."""
+    # Assuming JUDGE_MODEL_NAME is defined in config, if not, fallback to a default like LLAMA4_MODEL
+    from config import JUDGE_MODEL_NAME
+    return get_llm(model_name=JUDGE_MODEL_NAME, api_key=api_key)

@@ -1,51 +1,28 @@
-# Byte-compiled / optimized / DLL files
+# LLM/.gitignore
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
+*.egg-info/
+.env
+venv/
+.venv/
+
+# Streamlit
+.streamlit/
+
+# LlamaIndex persisted data & tracking
+persisted_index/
+data_for_rag/document_states.json # If you place tracking file inside data_dir, adjust path
 
 # Caches
 .cache/
-.streamlit/
 
-# VSCode
+# IDE specific
 .vscode/
+.idea/
 
-# Environment files
-.env
-.venv/
-venv/
-ENV/
-env.bak/
-env/
-
-# Jupyter Notebook checkpoints
-.ipynb_checkpoints
-
-# Pytest
-.cache/
-.pytest_cache/
-
-# System files
+# OS specific
 .DS_Store
 Thumbs.db
-
-# Log files
-*.log
-
-# Ignore data and models (customize as needed)
-data_for_rag/
-*.h5
-*.pkl
-*.pt
-*.onnx
-
-# Output and temporary files
-*.out
-*.tmp
-*.bak
-
-# Ignore any extraction folders
-squashfs-root/
-
-# Streamlit specific
-.streamlit/secrets.toml
