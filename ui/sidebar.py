@@ -118,34 +118,31 @@ def render_sidebar():
     st.sidebar.markdown("_Adjust settings to explore RAG techniques._")
     st.sidebar.markdown("---")
 
-    with st.sidebar.expander("🔑 API Keys & Core Models", expanded=True):
+    # API Keys
+    st.sidebar.subheader("🔑 API Keys")
+    groq_api_key = st.sidebar.text_input(
+        "Groq API Key",
+        type="password",
+        key="groq_api_key_sidebar_input",
+        help="Enter your Groq API key to use Groq-based LLMs."
+    )
+    if groq_api_key:
+        st.session_state["groq_api_key_sidebar"] = groq_api_key
 
-        # API Keys
-        st.sidebar.subheader("🔑 API Keys")
-        groq_api_key = st.sidebar.text_input(
-            "Groq API Key",
-            type="password",
-            key="groq_api_key_sidebar_input",
-            help="Enter your Groq API key to use Groq-based LLMs."
-        )
-        if groq_api_key:
-            st.session_state["groq_api_key_sidebar"] = groq_api_key
+    # LLM Selection
+    st.sidebar.subheader("🧠 LLM Selection")
+    models = {
+        "Llama3 70b (Meta)": LLAMA4_MODEL,
+        "DeepSeek-r1-distill-llama-70b": DEEPSEEK_MODEL
+    }
+    selected_model_display_name = st.sidebar.selectbox(
+        "Choose LLM:",
+        list(models.keys()),
+        key="selected_model_key",
+        help="Select the Large Language Model to use for generation and potentially indexing."
+    )
+    st.session_state.selected_model = models[selected_model_display_name]
 
-        # LLM Selection
-        st.sidebar.subheader("🧠 LLM Selection")
-        models = {
-            "Llama3 70b (Meta)": LLAMA4_MODEL,
-            "DeepSeek Coder 33b (DeepSeek)": DEEPSEEK_MODEL
-        }
-        selected_model_display_name = st.sidebar.selectbox(
-            "Choose LLM:",
-            list(models.keys()),
-            key="selected_model_key",
-            help="Select the Large Language Model to use for generation and potentially indexing."
-        )
-        st.session_state.selected_model = models[selected_model_display_name]
-
-    
     st.sidebar.subheader("📄 Document Processing")
     st.session_state.chunk_size_sidebar = st.sidebar.slider(
         "Chunk Size", 100, 2048, st.session_state.get("chunk_size_sidebar", DEFAULT_CHUNK_SIZE), 50,

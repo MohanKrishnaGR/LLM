@@ -3,7 +3,7 @@ import os
 
 # Model configurations
 LLAMA4_MODEL = "llama3-70b-8192"
-DEEPSEEK_MODEL = "deepseek-coder-33b-instruct"
+DEEPSEEK_MODEL = "deepseek-r1-distill-llama-70b"
 
 # --- IMPORTANT DIRECTORY CONFIGURATIONS ---
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
