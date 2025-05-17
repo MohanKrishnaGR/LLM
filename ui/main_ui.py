@@ -31,8 +31,11 @@ def handle_main_ui():
             - **Use the sidebar** to configure every step of the RAG pipeline.
             - **Observe how different settings** (indexing, retrieval, LLMs) impact the results.
             - **Dive into the 'Processing Details'** below each response to understand the inner workings.
+
             Happy experimenting!
-            """)
+            
+            <i>Stay tuned! More advanced RAG techniques & features are underway and will be added soon.</i>    
+            """, unsafe_allow_html=True)
     st.header("💬 Query Your Documents & Analyze RAG Behavior")
     query = st.text_area(
         "Enter your query:",

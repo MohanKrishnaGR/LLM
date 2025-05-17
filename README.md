@@ -8,8 +8,11 @@ This Streamlit-based sandbox allows AI enthusiasts, students, and researchers to
 <i>Stay tuned! More advanced RAG techniques & features are underway and will be added soon.</i>
 
 
-
 ## 🚀 Highlights
+
+```
+https://rag-by-mk.streamlit.app/
+```
 
 * **Interactive Playground** to tweak and test RAG components.
 * **Side-by-Side Comparison** of various indexing, retrieval, and LLM configurations.
@@ -59,7 +62,7 @@ LLM/
 
 ```bash
 git clone https://github.com/MohanKrishnaGR/LLM.git
-cd LLm
+cd LLM
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r LLM/requirements.txt
