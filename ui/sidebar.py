@@ -565,8 +565,8 @@ def render_sidebar():
 
     st.sidebar.markdown("---")
     st.sidebar.info(
-        f"Data Dir: `{DATA_DIR}`\n"
-        f"Supported: `{', '.join(SUPPORTED_FILE_EXTENSIONS)}`\n"
+        f"Data Dir: `{DATA_DIR}`\n\n"
+        f"Supported: `{', '.join(SUPPORTED_FILE_EXTENSIONS)}`\n\n"
         f"Index Persist: `{PERSIST_DIR_BASE}`\n\n"
         "Upload/Add documents & 'Create / Update Index'."
     )
