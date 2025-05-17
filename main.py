@@ -1,8 +1,10 @@
-# LLM/main.py
-# Main Streamlit application script
+"""
+Main entry point for the RAG Comparison application.
+Initializes the Streamlit interface and manages the application layout.
+"""
 
 import streamlit as st
-from utils.directory_utils import ensure_data_directory # This is important
+from utils.directory_utils import ensure_data_directory
 from ui.sidebar import render_sidebar
 from ui.main_ui import handle_main_ui
 from PIL import Image
@@ -22,8 +24,6 @@ st.set_page_config(
 
 st.title("🔬 Advanced RAG Comparison and Analysis")
 
-# Ensure the necessary data directory exists AT THE START
-# This is crucial before any sidebar logic that might list files from it
 ensure_data_directory()
 
 render_sidebar()

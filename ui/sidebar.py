@@ -1,4 +1,7 @@
-# LLM/ui/sidebar.py
+"""
+Main configuration sidebar for the RAG application.
+Handles document management, index configuration, and RAG parameters.
+"""
 import streamlit as st
 from config import (
     LLAMA4_MODEL, DEEPSEEK_MODEL, DATA_DIR, PERSIST_DIR_BASE, DOCUMENT_TRACKING_FILE,
@@ -43,16 +46,36 @@ FILE_READER_MAP = {
     ".pdf": PyMuPDFReader(),
     ".docx": DocxReader(),
     ".pptx": PptxReader(),
-    ".xlsx": PandasExcelReader(sheet_name=None), # Process all sheets
+    ".xlsx": PandasExcelReader(sheet_name=None),
     ".txt": FlatReader(),
     ".md": MarkdownReader(),
 }
 
 def get_persist_dir(index_type_name: str) -> str:
+    """
+    Get the persistence directory path for a given index type.
+    
+    Args:
+        index_type_name: Name of the index type.
+        
+    Returns:
+        str: Path to the persistence directory.
+    """
     safe_name = index_type_name.replace(" ", "_").lower()
     return os.path.join(PERSIST_DIR_BASE, safe_name)
 
 def load_or_initialize_index(selected_index_type: str, llm_for_indexing, embed_model):
+    """
+    Load an existing index or prepare for initialization.
+    
+    Args:
+        selected_index_type: Type of index to load.
+        llm_for_indexing: LLM instance for indexing.
+        embed_model: Embedding model instance.
+        
+    Returns:
+        Index instance if loaded successfully, None otherwise.
+    """
     persist_dir = get_persist_dir(selected_index_type)
     logger.info(f"Attempting to load or initialize index of type '{selected_index_type}' from persist_dir: {persist_dir}")
 
@@ -64,30 +87,33 @@ def load_or_initialize_index(selected_index_type: str, llm_for_indexing, embed_m
             if selected_index_type == "Knowledge Graph Index":
                 graph_store_file_path = os.path.join(persist_dir, "graph_store.json")
                 graph_store_dir_path = os.path.join(persist_dir, "graph_store")
-                if os.path.exists(graph_store_file_path) or os.path.exists(graph_store_dir_path) :
-                     logger.info(f"Potential KG graph_store data found in {persist_dir}.")
+                if os.path.exists(graph_store_file_path) or os.path.exists(graph_store_dir_path):
+                    logger.info(f"Potential KG graph_store data found in {persist_dir}.")
                 else:
-                    logger.warning(f"Knowledge Graph store data not explicitly found at {graph_store_file_path} or {graph_store_dir_path}. "
-                                   f"The index at {persist_dir} might be incomplete. Will attempt to load normally.")
+                    logger.warning(f"Knowledge Graph store data not found at expected locations.")
 
             storage_context = StorageContext.from_defaults(**storage_context_args)
             index = load_index_from_storage(storage_context)
-            logger.info(f"Successfully loaded existing {selected_index_type} from {persist_dir}. Index object ID: {id(index)}")
+            logger.info(f"Successfully loaded existing {selected_index_type} from {persist_dir}.")
             return index
         except Exception as e:
-            logger.error(f"Failed to load index from {persist_dir}: {e}. Clearing directory and rebuilding if files exist.", exc_info=True)
+            logger.error(f"Failed to load index from {persist_dir}: {e}. Clearing directory and rebuilding if files exist.")
             if os.path.exists(persist_dir):
                 try:
                     shutil.rmtree(persist_dir)
                     logger.info(f"Cleared potentially corrupted/incomplete persistence directory: {persist_dir}")
                 except Exception as rmtree_e:
                     logger.error(f"Error clearing directory {persist_dir}: {rmtree_e}")
-            return None # Indicate failure to load
+            return None
 
     logger.info(f"No persisted {selected_index_type} found at {persist_dir} or directory is empty. Index will be built from scratch if documents are available.")
     return None
 
 def render_sidebar():
+    """
+    Render the configuration sidebar with all RAG settings and controls.
+    Handles document upload, index management, and parameter configuration.
+    """
     st.sidebar.markdown("## 🛠️ RAG Configuration Workbench")
     st.sidebar.markdown("_Adjust settings to explore RAG techniques._")
     st.sidebar.markdown("---")

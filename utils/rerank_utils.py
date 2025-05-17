@@ -1,6 +1,10 @@
-# LLM/utils/rerank_utils.py
+"""
+Re-ranking utilities for improving RAG response relevance.
+Implements sentence transformer based re-ranking of retrieved nodes.
+"""
+
 import streamlit as st
-from config import RERANKER_MODEL_ID # Corrected: Use RERANKER_MODEL_ID
+from config import RERANKER_MODEL_ID
 from llama_index.core.schema import NodeWithScore
 from typing import List, Optional
 import logging
@@ -23,16 +27,22 @@ except ImportError:
 @st.cache_resource(show_spinner="Initializing Re-ranker...")
 def get_reranker(model_id: str, top_n: int) -> Optional[SentenceTransformerRerank]:
     """
-    Initializes and returns the SentenceTransformerRerank instance.
-    Caches the reranker resource.
+    Initialize and cache the re-ranker model.
+    
+    Args:
+        model_id: ID of the re-ranker model to use.
+        top_n: Number of top results to return after re-ranking.
+        
+    Returns:
+        SentenceTransformerRerank: Initialized re-ranker instance.
+        None: If initialization fails.
     """
     if not SENTENCE_TRANSFORMER_RERANK_AVAILABLE:
         return None
     try:
         reranker = SentenceTransformerRerank(
             model=model_id,
-            top_n=top_n,
-            # device="cuda" # Optional: Uncomment if you have a GPU and want to specify device
+            top_n=top_n
         )
         logger.info(f"Successfully initialized SentenceTransformerRerank with model: {model_id}, top_n: {top_n}")
         return reranker
@@ -44,12 +54,18 @@ def get_reranker(model_id: str, top_n: int) -> Optional[SentenceTransformerReran
 def functional_reranker(
     nodes_with_scores: List[NodeWithScore],
     query: str,
-    rerank_top_n: int = 3,
-    # reranker_model_id: str = RERANKER_MODEL_ID # Use the one from config by default
+    rerank_top_n: int = 3
 ) -> List[NodeWithScore]:
     """
-    Performs re-ranking of nodes based on the query.
-    Uses the RERANKER_MODEL_ID from config.
+    Re-rank retrieved nodes based on relevance to the query.
+    
+    Args:
+        nodes_with_scores: List of nodes with their initial relevance scores.
+        query: User query for re-ranking context.
+        rerank_top_n: Number of top results to return after re-ranking.
+        
+    Returns:
+        List[NodeWithScore]: Re-ranked nodes with updated relevance scores.
     """
     if not SENTENCE_TRANSFORMER_RERANK_AVAILABLE:
         st.warning("Re-ranking is disabled because SentenceTransformerRerank is not available. Returning original nodes.")

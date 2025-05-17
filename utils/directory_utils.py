@@ -1,7 +1,6 @@
-# LLM/utils/directory_utils.py
 import os
 import streamlit as st
-from config import DATA_DIR, SUPPORTED_FILE_EXTENSIONS # Ensure SUPPORTED_FILE_EXTENSIONS is imported
+from config import DATA_DIR, SUPPORTED_FILE_EXTENSIONS 
 import logging
 
 logger = logging.getLogger(__name__)
@@ -55,9 +54,17 @@ def save_uploaded_file(uploaded_file_object) -> bool:
 
 
 def delete_file_from_data_dir(file_name: str) -> bool:
-    """Deletes a file from the DATA_DIR."""
+    """
+    Deletes a file from the DATA_DIR.
+    
+    Args:
+        file_name: Name of the file to delete.
+    
+    Returns:
+        bool: True if deletion was successful, False otherwise.
+    """
     file_path = os.path.join(DATA_DIR, file_name)
-    if os.path.exists(file_path) and os.path.isfile(file_path): # Ensure it's a file
+    if os.path.exists(file_path) and os.path.isfile(file_path):
         try:
             os.remove(file_path)
             logger.info(f"Successfully deleted file: {file_name} from {DATA_DIR}")
@@ -66,7 +73,7 @@ def delete_file_from_data_dir(file_name: str) -> bool:
             st.error(f"Error deleting file '{file_name}': {e}")
             logger.error(f"Could not delete file {file_name}: {e}", exc_info=True)
             return False
-        except Exception as e: # Catch any other potential errors
+        except Exception as e:
             st.error(f"An unexpected error occurred while deleting '{file_name}': {e}")
             logger.error(f"Unexpected error deleting file {file_name}: {e}", exc_info=True)
             return False
@@ -76,11 +83,16 @@ def delete_file_from_data_dir(file_name: str) -> bool:
         return False
 
 def list_files_in_data_dir() -> list:
-    """Lists supported files in the DATA_DIR, returning their names, sizes, and full paths."""
+    """
+    Lists supported files in the DATA_DIR.
+    
+    Returns:
+        list: List of dictionaries containing file information (name, size, path).
+    """
     files_info = []
     if not os.path.exists(DATA_DIR) or not os.path.isdir(DATA_DIR):
         logger.warning(f"Data directory '{DATA_DIR}' does not exist or is not a directory.")
-        return files_info # Return empty list
+        return files_info
 
     try:
         for f_name in os.listdir(DATA_DIR):
@@ -90,7 +102,7 @@ def list_files_in_data_dir() -> list:
                     files_info.append({
                         "name": f_name,
                         "size": os.path.getsize(f_path),
-                        "path": f_path # Full path for internal use (e.g., deletion)
+                        "path": f_path
                     })
                 except OSError as e:
                     logger.warning(f"Could not get info for file: {f_path}. Error: {e}")

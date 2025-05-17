@@ -1,4 +1,6 @@
-# LLM/utils/document_tracker.py
+"""
+Document tracking utilities for managing file states and changes.
+"""
 import os
 import hashlib
 import json
@@ -21,8 +23,10 @@ def get_file_hash(file_path: str) -> str:
 
 def scan_directory_for_document_states(directory: str) -> dict:
     """
-    Scans a directory for supported files and returns their current states (path, hash, mtime).
-    Only includes files with extensions listed in SUPPORTED_FILE_EXTENSIONS from config.py.
+    Scans a directory for supported files and returns their current states.
+    
+    Returns:
+        dict: A dictionary containing file paths as keys and their states (hash, mtime) as values.
     """
     doc_states = {}
     if not os.path.isdir(directory):

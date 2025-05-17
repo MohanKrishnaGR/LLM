@@ -1,10 +1,12 @@
-# LLM/ui/main_ui.py
-# This file handles the main user interface elements and logic for the RAG application.
+"""
+Main user interface elements and logic for the RAG application.
+Handles user interactions, query processing, and result display.
+"""
 
 import streamlit as st
 import asyncio
 from utils.llm_utils import get_llm
-from workflow.rag_workflow import RAGWorkflow, StartEvent, RetrievalResult, QueryTransformEvent # Added QueryTransformEvent
+from workflow.rag_workflow import RAGWorkflow, StartEvent, RetrievalResult, QueryTransformEvent
 import logging
 import json
 
@@ -12,9 +14,15 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 def display_metadata(metadata: dict):
+    """
+    Display processing metadata in an expandable section.
+    
+    Args:
+        metadata: Dictionary containing processing details and metrics.
+    """
     if metadata:
-        with st.expander("🔬 View Processing Details (Metadata) - Understand the RAG Flow", expanded=False): # Expander title
-            st.markdown("_Inspect these details to see how different configurations affect query transformation, retrieval, and synthesis._") # Added descriptive text
+        with st.expander("🔬 View Processing Details (Metadata) - Understand the RAG Flow", expanded=False):
+            st.markdown("_Inspect these details to see how different configurations affect query transformation, retrieval, and synthesis._")
             try:
                 st.json(json.loads(json.dumps(metadata, default=str)), expanded=True)
             except Exception as e:
@@ -24,7 +32,11 @@ def display_metadata(metadata: dict):
         st.info("No metadata available to display.")
 
 def handle_main_ui():
-    if "app_intro_shown" not in st.session_state: # To show only once per session
+    """
+    Handle the main user interface of the RAG application.
+    Manages user interactions, model initialization, and response generation.
+    """
+    if "app_intro_shown" not in st.session_state:
         with st.expander("💡 Welcome to the RAG Experimentation Lab!", expanded=True):
             st.markdown("""
             This application is designed for a hands-on exploration of Retrieval Augmented Generation (RAG).
@@ -36,6 +48,7 @@ def handle_main_ui():
             
             <i>Stay tuned! More advanced RAG techniques & features are underway and will be added soon.</i>    
             """, unsafe_allow_html=True)
+
     st.header("💬 Query Your Documents & Analyze RAG Behavior")
     query = st.text_area(
         "Enter your query:",
@@ -82,13 +95,11 @@ def handle_main_ui():
                 logger.error("LLM initialization failed.")
                 return
 
-            # Pass loaded documents to RAGWorkflow if available (for BM25 in hybrid)
             loaded_documents = st.session_state.get("loaded_documents", None)
             rag_workflow_instance = RAGWorkflow(llm=llm, index=current_index, documents=loaded_documents)
             logger.info(f"RAGWorkflow initialized with LLM: {llm.__class__.__name__}, "
                         f"Index: {current_index.__class__.__name__}, "
                         f"Documents loaded: {bool(loaded_documents)}")
-
 
             async def run_async_rag_steps():
                 top_k_retrieval = st.session_state.get("top_k", 3)

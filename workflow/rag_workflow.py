@@ -1,5 +1,7 @@
-# LLM/workflow/rag_workflow.py
-# Defines the RAG (Retrieval Augmented Generation) workflow using LlamaIndex.
+"""
+Core RAG workflow implementation using LlamaIndex.
+Handles query transformation, retrieval, and response synthesis.
+"""
 
 import streamlit as st
 from typing import List, Optional, Dict, Any, Tuple
@@ -23,7 +25,7 @@ from llama_index.core.llms import LLM
 
 from utils.rerank_utils import functional_reranker
 from utils.judge_utils import functional_llm_as_judge
-from config import DEFAULT_QUERY_TRANSFORMATION_PROMPT # Import the new prompt
+from config import DEFAULT_QUERY_TRANSFORMATION_PROMPT
 
 import logging
 import json
@@ -32,22 +34,29 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 class QueryTransformEvent(Event):
+    """Event containing original and transformed query information."""
     original_query: str
     transformed_query: str
     metadata: Dict[str, Any]
 
 class RetrievalResult(Event):
+    """Event containing retrieval results and metadata."""
     nodes: List[NodeWithScore]
     original_query: str
-    transformed_query: Optional[str] # Added
+    transformed_query: Optional[str]
     metadata: Dict[str, Any]
 
 class RAGWorkflow(Workflow):
-    def __init__(self, llm: LLM, index: Any, documents: Optional[List[TextNode]] = None, **kwargs): # Added documents
+    """
+    Retrieval-Augmented Generation (RAG) workflow implementation.
+    Handles document retrieval and response generation using LLM.
+    """
+    
+    def __init__(self, llm: LLM, index: Any, documents: Optional[List[TextNode]] = None, **kwargs):
         super().__init__(**kwargs)
         self.llm = llm
         self.index = index
-        self.documents = documents # Store documents for potential BM25
+        self.documents = documents
         self.similarity_cutoff = 0.7
         self.max_tokens_for_llm = 4096
 
@@ -56,6 +65,15 @@ class RAGWorkflow(Workflow):
             logger.info(f"RAGWorkflow: Settings.llm updated to {self.llm.__class__.__name__}")
 
     def _process_text(self, text: Any) -> str:
+        """
+        Process input text to ensure UTF-8 encoding and proper formatting.
+        
+        Args:
+            text: Input text to process.
+            
+        Returns:
+            str: Processed text string.
+        """
         if not isinstance(text, str):
             text = str(text)
         try:
@@ -66,6 +84,18 @@ class RAGWorkflow(Workflow):
             return ""
 
     def _prepare_query(self, query: str) -> QueryBundle:
+        """
+        Prepare the query for RAG processing.
+        
+        Args:
+            query: Input query string.
+            
+        Returns:
+            QueryBundle: Processed query bundle.
+            
+        Raises:
+            ValueError: If query is empty after processing.
+        """
         processed_query = self._process_text(query)
         if not processed_query:
             logger.error("Query is empty after processing.")
@@ -75,10 +105,17 @@ class RAGWorkflow(Workflow):
     @step
     async def transform_query(self, ev: StartEvent, query: str) -> QueryTransformEvent:
         """
-        Transforms the query using an LLM if enabled.
+        Transform the query using LLM-based techniques.
+        
+        Args:
+            ev: Start event.
+            query: Original query string.
+            
+        Returns:
+            QueryTransformEvent: Event containing original and transformed queries.
         """
         original_query = query
-        transformed_query = query # Default to original if not transformed
+        transformed_query = query
         metadata = {"transformation_applied": False}
 
         if st.session_state.get("enable_query_transformation", False):
@@ -93,52 +130,44 @@ class RAGWorkflow(Workflow):
                         "User Query: {query_str}\nPassage:"
                     )
                     hyde_pipeline = QueryPipeline(
-                        chain=[hyde_prompt_template, self.llm], # self.llm is the LLM instance
+                        chain=[hyde_prompt_template, self.llm]
                     )
                     
-                    # The pipeline's arun method will execute the chain.
-                    # The output 'hyde_response_obj' will be the result from the last component (self.llm).
                     hyde_response_obj = await hyde_pipeline.arun(query_str=query)
-                    
                     actual_generated_text: Optional[str] = None
 
-                    # Extract text based on common LlamaIndex response types
                     if isinstance(hyde_response_obj, str):
-                        # If the pipeline already processed it to a string
                         actual_generated_text = hyde_response_obj
                     elif hasattr(hyde_response_obj, 'message') and hasattr(hyde_response_obj.message, 'content'):
-                        # This is the standard way to get content from a LlamaIndex ChatResponse
                         actual_generated_text = hyde_response_obj.message.content
                     elif hasattr(hyde_response_obj, 'text'):
-                        # Fallback for CompletionResponse or other similar response objects
                         actual_generated_text = hyde_response_obj.text
                     
                     if actual_generated_text is None:
                         logger.error(f"Query transformation (HyDE) failed to extract text from response of type: {type(hyde_response_obj)}. Full response: {hyde_response_obj}")
-                        transformed_query = query # Fallback to original query
+                        transformed_query = query
                         metadata["transformation_error"] = f"HyDE response type unhandled: {type(hyde_response_obj)}"
-                        metadata["transformation_applied"] = False # Ensure this reflects failure
+                        metadata["transformation_applied"] = False
                     else:
                         transformed_query = self._process_text(actual_generated_text)
-                        st.info(f"🧠 HyDE Query (using hypothetical doc): {transformed_query[:200]}...") # Show a bit more for context
+                        st.info(f"🧠 HyDE Query (using hypothetical doc): {transformed_query[:200]}...")
                         metadata["transformation_details"] = f"HyDE generated document of length {len(transformed_query)}"
-                        metadata["transformation_applied"] = True # Mark as successful if text was extracted
+                        metadata["transformation_applied"] = True
                         metadata["transformation_mode"] = mode
 
-
-                else: # Default Expansion (or other modes if you add them)
+                else:
                     prompt = DEFAULT_QUERY_TRANSFORMATION_PROMPT.format(original_query=query)
-                    response = await self.llm.acomplete(prompt) # Assuming .acomplete for completion LLMs
+                    response = await self.llm.acomplete(prompt)
                     
                     actual_generated_text: Optional[str] = None
                     if hasattr(response, 'text'):
                         actual_generated_text = response.text
-                    elif hasattr(response, 'message') and hasattr(response.message, 'content'): # Just in case acomplete returns chat-like
+                    elif hasattr(response, 'message') and hasattr(response.message, 'content'):
                         actual_generated_text = response.message.content
 
                     if actual_generated_text is None:
                         logger.error(f"Query transformation (Default Expansion) failed to extract text from response: {type(response)}. Full response: {response}")
-                        transformed_query = query # Fallback to original query
+                        transformed_query = query
                         metadata["transformation_error"] = f"Default Expansion response type unhandled: {type(response)}"
                         metadata["transformation_applied"] = False
                     else:
@@ -150,9 +179,9 @@ class RAGWorkflow(Workflow):
             
             except Exception as e:
                 logger.error(f"Query transformation failed with exception: {str(e)}", exc_info=True)
-                transformed_query = query # Fallback to original query on any exception
+                transformed_query = query
                 metadata["transformation_error"] = str(e)
-                metadata["transformation_applied"] = False # Mark as failed
+                metadata["transformation_applied"] = False
         
         return QueryTransformEvent(
             original_query=original_query,
@@ -162,8 +191,19 @@ class RAGWorkflow(Workflow):
 
     @step
     async def retrieve(self, ev: QueryTransformEvent, top_k: int = 3, rerank_top_n: int = 3) -> RetrievalResult:
+        """
+        Retrieve relevant documents based on the query.
+        
+        Args:
+            ev: Query transformation event.
+            top_k: Number of top results to retrieve.
+            rerank_top_n: Number of results to keep after re-ranking.
+            
+        Returns:
+            RetrievalResult: Event containing retrieved nodes and metadata.
+        """
         original_query = ev.original_query
-        query_to_use = ev.transformed_query # Use transformed query
+        query_to_use = ev.transformed_query
         query_bundle = self._prepare_query(query_to_use)
         
         search_mode = st.session_state.get("search_mode", "Vector Only")
@@ -171,14 +211,14 @@ class RAGWorkflow(Workflow):
 
         st.info(f"📚 Retrieving (mode: {search_mode}) for: '{query_to_use}' (Original: '{original_query}')")
         logger.info(f"Retrieving for query: '{query_bundle.query_str}' (orig: '{original_query}') "
-                    f"with dense_top_k={top_k}, sparse_top_k={sparse_top_k}, index_type={type(self.index).__name__}, search_mode='{search_mode}'")
+                    f"with dense_top_k={top_k}, sparse_top_k={sparse_top_k}, index_type={type(self.index).__name__}, search_mode='{search_mode}')")
 
         if not self.index:
             logger.error("Index is not loaded for retrieval.")
             raise ValueError("Index is not loaded")
 
         nodes: List[NodeWithScore] = []
-        retrieval_metadata: Dict[str, Any] = ev.metadata # Carry over transformation metadata
+        retrieval_metadata: Dict[str, Any] = ev.metadata
 
         # --- Vector Store Index Retrieval ---
         if isinstance(self.index, VectorStoreIndex):
@@ -190,21 +230,13 @@ class RAGWorkflow(Workflow):
 
             if search_mode == "Hybrid (Vector + Sparse Fusion)":
                 st.info(f"Performing sparse retrieval (simulated/BM25) with top_k={sparse_top_k}...")
-                if self.documents: # Check if documents were passed for BM25
+                if self.documents:
                     try:
-                        # Ensure NLTK resources for tokenization if not already downloaded
-                        # import nltk
-                        # try:
-                        #     nltk.data.find('tokenizers/punkt')
-                        # except nltk.downloader.DownloadError:
-                        #     nltk.download('punkt', quiet=True)
-                        
                         bm25_retriever = BM25Retriever.from_defaults(
-                            nodes=self.documents, # Use pre-loaded documents/nodes
+                            nodes=self.documents,
                             similarity_top_k=sparse_top_k
                         )
-                        sparse_nodes = await bm25_retriever.aretrieve(query_bundle.query_str) # BM25Retriever takes string
-                        # Deduplicate nodes based on node_id if combining
+                        sparse_nodes = await bm25_retriever.aretrieve(query_bundle.query_str)
                         existing_node_ids = {n.node.node_id for n in nodes}
                         for sn in sparse_nodes:
                             if sn.node.node_id not in existing_node_ids:
@@ -220,7 +252,6 @@ class RAGWorkflow(Workflow):
                     logger.warning("Hybrid search selected but no documents available for BM25Retriever.")
                     st.warning("Hybrid search: Documents not loaded for sparse retrieval part.")
             
-            # Apply similarity cutoff postprocessor for vector search (applies to all nodes for simplicity here)
             similarity_postprocessor = SimilarityPostprocessor(similarity_cutoff=self.similarity_cutoff)
             nodes = similarity_postprocessor.postprocess_nodes(nodes, query_bundle=query_bundle)
             retrieval_metadata["similarity_cutoff_applied"] = self.similarity_cutoff
@@ -233,9 +264,9 @@ class RAGWorkflow(Workflow):
             
             kg_retriever = self.index.as_retriever(
                 retriever_mode=graph_retriever_mode,
-                similarity_top_k=top_k, # Used for 'embedding' or 'hybrid' KG modes
+                similarity_top_k=top_k,
                 include_text=True,
-                graph_store_query_depth=graph_traversal_depth # Added depth
+                graph_store_query_depth=graph_traversal_depth
             )
             nodes = await kg_retriever.aretrieve(query_bundle.query_str)
             retrieval_metadata["graph_retriever_mode"] = graph_retriever_mode
@@ -252,7 +283,7 @@ class RAGWorkflow(Workflow):
             if text_nodes:
                 try:
                     logger.info(f"Applying reranker with top_n={rerank_top_n}.")
-                    nodes = functional_reranker(text_nodes, original_query, rerank_top_n) # Rerank on original query
+                    nodes = functional_reranker(text_nodes, original_query, rerank_top_n)
                     retrieval_metadata["reranked"] = True
                     retrieval_metadata["rerank_top_n_used"] = rerank_top_n
                 except Exception as e:
@@ -278,99 +309,84 @@ class RAGWorkflow(Workflow):
 
     @step
     async def synthesize(self, ev: RetrievalResult) -> StopEvent:
+        """
+        Synthesize a response from retrieved documents.
+        
+        Args:
+            ev: Retrieval result event containing nodes and query information.
+            
+        Returns:
+            StopEvent: Event containing the final response and metadata.
+        """
         if not ev.nodes:
-            logger.info("No relevant information found to synthesize a response.")
-            response_text = "No relevant information was found based on your query and current retrieval settings."
-            if ev.transformed_query:
-                response_text += f"\n(Query after transformation: '{ev.transformed_query}')"
-            return StopEvent(result={
-                "response": response_text,
-                "judgement": "N/A (No response to judge)",
-                "metadata": ev.metadata
-            })
+            logger.warning("No nodes available for response synthesis.")
+            return StopEvent(response="No relevant information found.", metadata=ev.metadata)
 
         try:
-            query_for_synthesis = ev.original_query # Always use original query for final answer synthesis
+            query_for_synthesis = ev.original_query
             logger.info(f"Synthesizing response for query: '{query_for_synthesis}' with {len(ev.nodes)} nodes.")
             
             response_synthesizer = get_response_synthesizer(
-                llm=self.llm,
                 response_mode="compact",
-                verbose=True,
                 use_async=True
             )
-            
-            response_obj = await response_synthesizer.asynthesize(
+
+            response = await response_synthesizer.asynthesize(
                 query=query_for_synthesis,
                 nodes=ev.nodes
             )
-            
-            if not response_obj or not hasattr(response_obj, 'response'):
-                logger.error("Invalid response format from LLM or synthesizer.")
-                raise ValueError("Invalid response format from LLM or synthesizer")
-            
-            response_text = self._process_text(str(response_obj.response))
-            if not response_text:
-                response_text = "The language model generated an empty response."
 
-            judgement_text = "LLM-as-a-Judge disabled."
-            if st.session_state.get("enable_llm_judge") and st.session_state.get("groq_api_key_sidebar"):
-                logger.info("Performing LLM-as-a-Judge evaluation.")
+            response_text = response.response.strip()
+            response_metadata = {
+                "source_nodes": [
+                    {
+                        "text": node.node.text[:1000] if hasattr(node.node, "text") else "No text available",
+                        "metadata": node.node.metadata if hasattr(node.node, "metadata") else {},
+                        "score": node.score if hasattr(node, "score") else None
+                    }
+                    for node in ev.nodes
+                ],
+                "transformation_info": ev.metadata
+            }
+
+            if st.session_state.get("enable_llm_judge", False):
                 try:
                     raw_judgement = await functional_llm_as_judge(
-                        query=query_for_synthesis, # Judge based on original query
+                        query=query_for_synthesis,
                         response_text=response_text,
                         judge_llm_name=st.session_state.get("selected_model"),
-                        groq_api_key=st.session_state["groq_api_key_sidebar"]
+                        groq_api_key=st.session_state.get("groq_api_key_sidebar", "")
                     )
-                    judgement_text = self._process_text(str(raw_judgement)) if raw_judgement else "Judge evaluation produced no result."
-                except Exception as e:
-                    logger.error(f"Judge evaluation error: {str(e)}", exc_info=True)
-                    judgement_text = f"Judge evaluation failed: {str(e)}"
-            
-            synthesis_metadata = {
-                "response_length_chars": len(response_text),
-                "llm_used_for_synthesis": self.llm.__class__.__name__,
-                "response_synthesizer_mode": "compact",
-                "has_judgement": judgement_text != "LLM-as-a-Judge disabled." and not judgement_text.startswith("Judge evaluation failed")
-            }
-            if ev.transformed_query:
-                synthesis_metadata["transformed_query_used_for_retrieval"] = ev.transformed_query
+                    response_metadata["llm_judge_evaluation"] = raw_judgement
+                except Exception as judge_error:
+                    logger.error(f"LLM Judge evaluation failed: {str(judge_error)}", exc_info=True)
+                    response_metadata["llm_judge_error"] = str(judge_error)
 
-            final_metadata = {**ev.metadata, **synthesis_metadata}
-
-            return StopEvent(result={
-                "response": response_text,
-                "judgement": judgement_text,
-                "metadata": final_metadata
-            })
+            return StopEvent(response=response_text, metadata=response_metadata)
 
         except Exception as e:
-            logger.error(f"Synthesis step error: {str(e)}", exc_info=True)
-            return StopEvent(result={
-                "response": f"Error during response generation: {str(e)}",
-                "judgement": "N/A (Error in synthesis)",
-                "metadata": {**ev.metadata, "synthesis_error": str(e), "details": "Error in synthesis step"}
-            })
+            error_msg = f"Response synthesis failed: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            return StopEvent(response=error_msg, metadata={"error": str(e), **ev.metadata})
 
     def _get_bm25_retriever(self, sparse_top_k: int) -> Optional[BM25Retriever]:
-        """Helper to initialize BM25Retriever if documents are available."""
-        if self.documents:
-            try:
-                # This is a simplified initialization. You might need to customize tokenization.
-                # Ensure NLTK punkt is available if BM25Retriever's default tokenizer needs it.
-                import nltk
-                try:
-                    nltk.data.find('tokenizers/punkt')
-                except nltk.downloader.DownloadError:
-                    logger.info("NLTK 'punkt' not found, downloading...")
-                    nltk.download('punkt', quiet=True)
-                
-                return BM25Retriever.from_defaults(
-                    nodes=self.documents, 
-                    similarity_top_k=sparse_top_k
-                )
-            except Exception as e:
-                logger.error(f"Failed to initialize BM25Retriever: {e}")
-                st.warning(f"Could not initialize BM25Retriever: {e}")
-        return None
+        """
+        Get a BM25 retriever instance for sparse text retrieval.
+        
+        Args:
+            sparse_top_k: Number of top results to retrieve.
+            
+        Returns:
+            BM25Retriever: Initialized BM25 retriever instance.
+            None: If initialization fails.
+        """
+        if not self.documents:
+            return None
+        try:
+            return BM25Retriever.from_defaults(
+                nodes=self.documents,
+                similarity_top_k=sparse_top_k
+            )
+        except Exception as e:
+            logger.error(f"Failed to initialize BM25Retriever: {e}", exc_info=True)
+            return None

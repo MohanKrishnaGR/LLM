@@ -1,4 +1,8 @@
-# LLM/utils/llm_utils.py
+"""
+Language Model utilities for initializing and managing LLM instances.
+Provides caching and error handling for LLM and embedding model initialization.
+"""
+
 import streamlit as st
 from llama_index.llms.groq import Groq
 from llama_index.core.llms import LLM
@@ -11,7 +15,13 @@ logger = logging.getLogger(__name__)
 
 @st.cache_resource(show_spinner="Connecting to Embedding Model...")
 def get_embedding_model() -> Optional[FastEmbedEmbedding]:
-    """Initializes and returns the embedding model using EMBEDDING_MODEL_ID from config."""
+    """
+    Initialize and cache the embedding model.
+    
+    Returns:
+        FastEmbedEmbedding: Initialized embedding model instance.
+        None: If initialization fails.
+    """
     try:
         embed_model = FastEmbedEmbedding(model_name=EMBEDDING_MODEL_ID)
         logger.info(f"Successfully initialized embedding model: {EMBEDDING_MODEL_ID}")
@@ -23,7 +33,17 @@ def get_embedding_model() -> Optional[FastEmbedEmbedding]:
 
 @st.cache_resource(show_spinner="Connecting to LLM...")
 def get_llm(model_name: str, api_key: Optional[str] = None) -> Optional[LLM]:
-    """Initializes and returns the Language Model."""
+    """
+    Initialize and cache the Language Model.
+    
+    Args:
+        model_name: Name of the LLM model to initialize.
+        api_key: Optional API key for model access.
+        
+    Returns:
+        LLM: Initialized language model instance.
+        None: If initialization fails.
+    """
     if not api_key:
         if "groq_api_key_sidebar" in st.session_state and st.session_state["groq_api_key_sidebar"]:
             api_key = st.session_state["groq_api_key_sidebar"]
@@ -42,7 +62,15 @@ def get_llm(model_name: str, api_key: Optional[str] = None) -> Optional[LLM]:
         return None
 
 def get_default_llm_for_judging(api_key: Optional[str] = None) -> Optional[LLM]:
-    """Gets the default LLM specified for judging tasks."""
-    # Assuming JUDGE_MODEL_NAME is defined in config, if not, fallback to a default like LLAMA4_MODEL
+    """
+    Get the default LLM instance for judging tasks.
+    
+    Args:
+        api_key: Optional API key for model access.
+        
+    Returns:
+        LLM: Initialized language model instance for judging.
+        None: If initialization fails.
+    """
     from config import JUDGE_MODEL_NAME
     return get_llm(model_name=JUDGE_MODEL_NAME, api_key=api_key)

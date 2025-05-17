@@ -1,6 +1,4 @@
-# LLM/.gitignore
-
-# Python
+# Python artifacts
 __pycache__/
 *.py[cod]
 *$py.class
@@ -9,20 +7,15 @@ __pycache__/
 venv/
 .venv/
 
-# Streamlit
-.streamlit/
-
-# LlamaIndex persisted data & tracking
+# Application specific
 persisted_index/
-data_for_rag/document_states.json # If you place tracking file inside data_dir, adjust path
+data_for_rag/document_states.json
 
-# Caches
+# Development environment
 .cache/
-
-# IDE specific
 .vscode/
 .idea/
 
-# OS specific
+# Operating system
 .DS_Store
 Thumbs.db
